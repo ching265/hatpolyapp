@@ -2,14 +2,16 @@ package com.example.lovepoly.ui.opengl
 
 import android.content.Context
 import android.opengl.GLES20
+import com.example.lovepoly.R
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
 
 class Rectangle3D(private val context: Context) {
     private var vertexBuffer: FloatBuffer
-    private var colorBuffer: FloatBuffer
+    private var textureBuffer: FloatBuffer
     private var mProgram: Int
+    private var textureId: Int
 
     // Tọa độ các đỉnh của hình chữ nhật
     private val vertices = floatArrayOf(
@@ -26,16 +28,19 @@ class Rectangle3D(private val context: Context) {
         -0.5f, 0.5f, -0.5f   // top left
     )
 
-    // Màu sắc cho các đỉnh
-    private val colors = floatArrayOf(
-        1.0f, 0.0f, 0.0f, 1.0f,  // red
-        0.0f, 1.0f, 0.0f, 1.0f,  // green
-        0.0f, 0.0f, 1.0f, 1.0f,  // blue
-        1.0f, 1.0f, 0.0f, 1.0f,  // yellow
-        1.0f, 0.0f, 1.0f, 1.0f,  // magenta
-        0.0f, 1.0f, 1.0f, 1.0f,  // cyan
-        1.0f, 1.0f, 1.0f, 1.0f,  // white
-        0.5f, 0.5f, 0.5f, 1.0f   // gray
+    // Tọa độ texture cho các đỉnh
+    private val textureCoords = floatArrayOf(
+        // Mặt trước
+        0.0f, 1.0f,  // bottom left
+        1.0f, 1.0f,  // bottom right
+        1.0f, 0.0f,  // top right
+        0.0f, 0.0f,  // top left
+
+        // Mặt sau
+        0.0f, 1.0f,  // bottom left
+        1.0f, 1.0f,  // bottom right
+        1.0f, 0.0f,  // top right
+        0.0f, 0.0f   // top left
     )
 
     // Thứ tự vẽ các mặt
@@ -70,12 +75,12 @@ class Rectangle3D(private val context: Context) {
         vertexBuffer.put(vertices)
         vertexBuffer.position(0)
 
-        // Khởi tạo color buffer
-        val cb = ByteBuffer.allocateDirect(colors.size * 4)
-        cb.order(ByteOrder.nativeOrder())
-        colorBuffer = cb.asFloatBuffer()
-        colorBuffer.put(colors)
-        colorBuffer.position(0)
+        // Khởi tạo texture buffer
+        val tb = ByteBuffer.allocateDirect(textureCoords.size * 4)
+        tb.order(ByteOrder.nativeOrder())
+        textureBuffer = tb.asFloatBuffer()
+        textureBuffer.put(textureCoords)
+        textureBuffer.position(0)
 
         // Khởi tạo index buffer
         indexBuffer = ByteBuffer.allocateDirect(indices.size * 2)
@@ -91,6 +96,9 @@ class Rectangle3D(private val context: Context) {
             GLES20.glAttachShader(program, fragmentShader)
             GLES20.glLinkProgram(program)
         }
+
+        // Load texture
+        textureId = TextureHelper.loadTexture(context, R.drawable.watermelon_icecream)
     }
 
     fun draw(mvpMatrix: FloatArray) {
@@ -98,26 +106,32 @@ class Rectangle3D(private val context: Context) {
 
         // Lấy handle cho các biến trong shader
         val positionHandle = GLES20.glGetAttribLocation(mProgram, "vPosition")
-        val colorHandle = GLES20.glGetAttribLocation(mProgram, "vColor")
+        val textureCoordHandle = GLES20.glGetAttribLocation(mProgram, "aTexCoord")
         val mvpMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix")
+        val textureHandle = GLES20.glGetUniformLocation(mProgram, "uTexture")
 
         // Enable vertex array
         GLES20.glEnableVertexAttribArray(positionHandle)
-        GLES20.glEnableVertexAttribArray(colorHandle)
+        GLES20.glEnableVertexAttribArray(textureCoordHandle)
 
         // Chuẩn bị vertex data
         GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 0, vertexBuffer)
-        GLES20.glVertexAttribPointer(colorHandle, 4, GLES20.GL_FLOAT, false, 0, colorBuffer)
+        GLES20.glVertexAttribPointer(textureCoordHandle, 2, GLES20.GL_FLOAT, false, 0, textureBuffer)
 
         // Áp dụng transformation matrix
         GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
+
+        // Set texture
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId)
+        GLES20.glUniform1i(textureHandle, 0)
 
         // Vẽ hình chữ nhật
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, indices.size, GLES20.GL_UNSIGNED_SHORT, indexBuffer)
 
         // Disable vertex array
         GLES20.glDisableVertexAttribArray(positionHandle)
-        GLES20.glDisableVertexAttribArray(colorHandle)
+        GLES20.glDisableVertexAttribArray(textureCoordHandle)
     }
 
     private fun loadShader(type: Int, shaderCode: String): Int {
@@ -131,18 +145,19 @@ class Rectangle3D(private val context: Context) {
         private const val vertexShaderCode =
             "uniform mat4 uMVPMatrix;" +
             "attribute vec4 vPosition;" +
-            "attribute vec4 vColor;" +
-            "varying vec4 fragmentColor;" +
+            "attribute vec2 aTexCoord;" +
+            "varying vec2 vTexCoord;" +
             "void main() {" +
             "  gl_Position = uMVPMatrix * vPosition;" +
-            "  fragmentColor = vColor;" +
+            "  vTexCoord = aTexCoord;" +
             "}"
 
         private const val fragmentShaderCode =
             "precision mediump float;" +
-            "varying vec4 fragmentColor;" +
+            "varying vec2 vTexCoord;" +
+            "uniform sampler2D uTexture;" +
             "void main() {" +
-            "  gl_FragColor = fragmentColor;" +
+            "  gl_FragColor = texture2D(uTexture, vTexCoord);" +
             "}"
     }
 } 

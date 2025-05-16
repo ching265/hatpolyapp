@@ -9,18 +9,18 @@ import javax.microedition.khronos.opengles.GL10
 
 class CubeRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
-    private lateinit var rectangle3D: Rectangle3D
+    private lateinit var triangleGrid: TriangleGrid
     private val projectionMatrix = FloatArray(16)
     private val viewMatrix = FloatArray(16)
     private val mvpMatrix = FloatArray(16)
-    private val rotationMatrix = FloatArray(16)
     var angleX = 0f
-    var angleY = 0f
+    var angleZ = 0f
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         GLES20.glClearColor(0f, 0f, 0f, 1f)
         GLES20.glEnable(GLES20.GL_DEPTH_TEST)
-        rectangle3D = Rectangle3D(context)
+        GLES20.glEnable(GLES20.GL_TEXTURE_2D)
+        triangleGrid = TriangleGrid(context)
     }
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
@@ -35,15 +35,18 @@ class CubeRenderer(private val context: Context) : GLSurfaceView.Renderer {
         Matrix.setLookAtM(viewMatrix, 0, 0f, 0f, 5f, 0f, 0f, 0f, 0f, 1f, 0f)
         Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
 
-        // Apply rotation
-        Matrix.setRotateM(rotationMatrix, 0, angleY, 0f, 1f, 0f)
-        val temp = FloatArray(16)
-        Matrix.setRotateM(temp, 0, angleX, 1f, 0f, 0f)
-        Matrix.multiplyMM(rotationMatrix, 0, rotationMatrix, 0, temp, 0)
-        val finalMVP = FloatArray(16)
-        Matrix.multiplyMM(finalMVP, 0, mvpMatrix, 0, rotationMatrix, 0)
+        // Draw triangle grid với cả hai góc xoay
+        triangleGrid.draw(mvpMatrix, angleX, angleZ)
+    }
 
-        // Draw rectangle
-        rectangle3D.draw(finalMVP)
+    fun rotate(dx: Float, dy: Float) {
+        angleZ += dx * 0.5f
+        angleX += dy * 0.5f
+    }
+
+    fun reset() {
+        triangleGrid.reset()
+        angleX = 0f
+        angleZ = 0f
     }
 }
