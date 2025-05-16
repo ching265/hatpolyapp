@@ -28,9 +28,7 @@ class CubeGLSurfaceView(context: Context) : GLSurfaceView(context) {
             MotionEvent.ACTION_MOVE -> {
                 val dx = x - previousX
                 val dy = y - previousY
-
-                renderer.angleY += dx * 0.5f
-                renderer.angleX += dy * 0.5f
+                renderer.rotate(dx, dy)
             }
         }
 
