@@ -35,11 +35,14 @@ class PiecePlane(
             gl_FragColor = texture2D(uTexture, vTexCoord);
         }
     """
+    
+    // Kích thước mảnh nhỏ hơn và đồng đều
+    private val pieceSize = 0.08f
     private val vertices = floatArrayOf(
-        -0.15f, 0.15f, 0f,
-        -0.15f, -0.15f, 0f,
-        0.15f, -0.15f, 0f,
-        0.15f, 0.15f, 0f
+        -pieceSize, pieceSize, 0f,    // Top left
+        -pieceSize, -pieceSize, 0f,   // Bottom left
+        pieceSize, -pieceSize, 0f,    // Bottom right
+        pieceSize, pieceSize, 0f      // Top right
     )
     private val texCoords = floatArrayOf(
         0f, 0f,

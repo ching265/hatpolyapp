@@ -6,10 +6,11 @@ import android.opengl.Matrix
 import com.example.lovepoly.R
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 class TriangleGrid(
     private val context: Context,
-    private val gridSize: Int = 4  // Kích thước lưới (4x4)
+    private val gridSize: Int = 3  // Kích thước lưới (3x3)
 ) {
     private val triangles = mutableListOf<Triangle>()
     private val mProgram: Int
@@ -37,19 +38,23 @@ class TriangleGrid(
     }
 
     private fun createGrid() {
-        val radius = 1.0f
+        val radius = 0.6f  // Bán kính đã được điều chỉnh
         val n = gridSize
-        // Tạo lưới điểm trên mặt cầu
+
+        // Tạo lưới điểm trên mặt cầu với khoảng cách đều
         val points = Array(n + 1) { i ->
             Array(n + 1) { j ->
-                val theta = Math.PI * (i.toDouble() / n)
-                val phi = 2 * Math.PI * (j.toDouble() / n)
+                // Sử dụng tọa độ cầu với khoảng cách đều theo diện tích
+                val theta = Math.acos(1.0 - 2.0 * (i.toDouble() + 0.5) / (n + 1))
+                val phi = 2.0 * Math.PI * (j.toDouble() + 0.5) / (n + 1)
+                
                 val x = (radius * Math.sin(theta) * Math.cos(phi)).toFloat()
                 val y = (radius * Math.sin(theta) * Math.sin(phi)).toFloat()
                 val z = (radius * Math.cos(theta)).toFloat()
                 floatArrayOf(x, y, z)
             }
         }
+
         for (row in 0 until n) {
             for (col in 0 until n) {
                 // Tam giác 1
